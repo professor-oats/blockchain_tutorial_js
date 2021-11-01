@@ -1,0 +1,3 @@
+[submodule "CryptoJS"]
+	path = CryptoJS
+	url = https://github.com/sytelus/CryptoJS.git
