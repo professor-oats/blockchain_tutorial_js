@@ -1,21 +1,34 @@
-// We will also need to add a proof-of-work so you just can't create new blockchain on the go and make a remade version of another blockchain
+// Part 1: Create the blockchain
+
+// Part 2: We will also need to add a proof-of-work so you just can't create new blockchain on the go and make a remade version of another blockchain
 
 // We will have to set a 'difficulty' so the coin will take a while for a processor to be computed. Bitcoins' aim is to have a 10 minutes duration for every creation of a new block.
 
 // Proof-of-work is therefore a measurement of computing power to make a block
 
+// Part 3: Introduce crypto currency to the blockchain. We will make it so a block can contain multiple transaction and also add a reward for mining
+
+// Transaction made between the creation of a new block is stored in pending transaction arrays that can be included in the new block
+
+class Transaction {
+    constructor(fromAddress, toAddress, amount) {
+	this.fromAddress = fromAddress;
+	this.toAddress = toAddress;
+	this.amount = amount;
+    }
+}
+
 class Block {
-    constructor(index, timestamp, data, previousHash = '') {
-	this.index = index;
+    constructor(timestamp, transactions, previousHash = '') {
 	this.timestamp = timestamp;
-	this.data = data;
+	this.transactions = transactions;
 	this.previousHash = previousHash;
 	this.hash = this.calculateHash();
 	this.nonce = 0;
     }
 
     calculateHash() {
-	var hash1 = CryptoJS.SHA256(this.index + this.previousHash + this.timestamp + JSON.stringify(this.data + this.nonce)).toString();
+	var hash1 = CryptoJS.SHA256(this.previousHash + this.timestamp + JSON.stringify(this.transactions + this.nonce)).toString();
 	return hash1;
     }
 
@@ -32,22 +45,62 @@ class Block {
 class Blockchain {
     constructor() {
 	this.chain = [this.createGenesisBlock()];
-	this.difficulty = 4;
+	this.difficulty = 2;
+	this.pendingTransactions = [];
+	this.miningReward = 100;
     }
 
     createGenesisBlock() {
-	return new Block(0, "01/11/2021", "Genesis block", "0");
+	return new Block("01/11/2021", "Genesis block", "0");
     }
 
     getLatestBlock() {
 	return this.chain[this.chain.length - 1];    // The chain is array of all the blocks whereat this.chain.length - 1 gives us the position of the last block
     }
 
-    addBlock(newBlock) {
+/*    addBlock(newBlock) {
 	newBlock.previousHash = this.getLatestBlock().hash;    // When adding new block the previous hash must be the same as the hash of the latest block for the new block to be valid
 	newBlock.mineBlock(this.difficulty);    // Create a hash for this block
 	this.chain.push(newBlock);
     }
+*/
+
+    minePendingTransactions(miningRewardAddress) {
+	let block = new Block(Date.now(), this.pendingTransactions);    // Including all pending transactions in the new block. This works only because we have an easy and small blockchain. In reality you have to code the miner so it picks what transactions to store in new block.
+
+	block.mineBlock(this.difficulty);
+	
+	console.log('Block successfully mined!');
+	this.chain.push(block);    // Pushing the new block to the chain
+
+	this.pendingTransactions = [
+	    new Transaction(null, miningRewardAddress, this.miningReward)
+	];    // Clear the pending transaction by defining a new transaction. The fromAdress is 'null' in this case since we have no fromAdress here when miners generate the new block. Send it to miningRewardAdress and the amount this.miningReward
+
+    }
+
+    createTransaction(transaction) {
+	this.pendingTransactions.push(transaction);
+    }
+
+    getBalanceOfAddress(address) {
+	let balance = 0;
+
+	for(const block of this.chain) {    // Loop over all blocks in the chain
+	    for(const trans of block.transactions) {    // Loop over all transactions in the block
+		if(trans.fromAddress === address) {
+		    balance -= trans.amount;
+		}
+
+		if(trans.toAddress === address) {
+		    balance += trans.amount;
+		}
+	    }
+	}
+
+	return balance;
+    }
+	
 
     isChainValid() {
 	for(let i = 1; i < this.chain.length; i++) {
@@ -70,9 +123,15 @@ class Blockchain {
 
 let savjeeCoin = new Blockchain();
 
-console.log('Mining block 1...');
-savjeeCoin.addBlock(new Block(1, "10/11/2021", { amount: 4 }));
-console.log('Mining block 2...');
-savjeeCoin.addBlock(new Block(2, "12/11/2021", { amount: 10 }));
+savjeeCoin.createTransaction(new Transaction('address1', 'address2', 100));
+savjeeCoin.createTransaction(new Transaction('address2', 'address1', 50));
 
+console.log('\nStarting the miner...');
+savjeeCoin.minePendingTransactions('xaviers-address');    // Mining after the transactions to create the new amount/new coins
 
+console.log('\nBalance of xavier is', savjeeCoin.getBalanceOfAddress('xaviers-address'));
+
+console.log('\nStarting the miner again...');
+savjeeCoin.minePendingTransactions('xaviers-address');    // Mining after the transactions to create the new amount/new coins
+
+console.log('\nBalance of xavier is', savjeeCoin.getBalanceOfAddress('xaviers-address'));
